@@ -2,134 +2,131 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 
-function Square(props) {
-	return (
-		<button className="square" onClick={props.onClick}>
-			{props.value}
-		</button>
-	);
-}
-
-class Board extends React.Component {
-	
-	renderSquare(i) {
-		return (
-			<Square 
-				value={this.props.squares[i]} 
-				onClick={() => this.props.onClick(i)}	
-			/>
-		);
-	}
-
-	render() {
-		let status = 'Next player: ' + (this.state.xIsNext ? 'X' : 'O');
-		const winner = this.calculateWinner(this.state.squares);
-		
-		if (winner) {
-			status = 'Winner: ' + winner;
-		}
-		else {
-			status = 'Next player: ' + (this.state.xIsNext ? 'X' : 'O');
-		}
-		
-		return (
-			<div>
-				<div className="board-row">
-					{this.renderSquare(0)}
-					{this.renderSquare(1)}
-					{this.renderSquare(2)}
-				</div>
-				<div className="board-row">
-					{this.renderSquare(3)}
-					{this.renderSquare(4)}
-					{this.renderSquare(5)}
-				</div>
-				<div className="board-row">
-					{this.renderSquare(6)}
-					{this.renderSquare(7)}
-					{this.renderSquare(8)}
-				</div>
-			</div>
-		);
-	}
-}
-
-class Game extends React.Component {
+class HTMLMediaRecorder extends React.Component {
 	
 	constructor(props) {
 		super(props);
-		this.state = {
-			history: [{ squares: Array(9).fill(null)}],
-			xIsNext: true
+		this.mediaRecorder = null;
+	  }
+	
+	initializeMediaRecorder = () => {
+		
+		
+		let constraintObj = { 
+			audio: true,
+			video: true
 		};
-	}
-	
-	handleClick(i) {
 		
-		const history = this.state.history;
-		const current = history[history.length - 1];
-		const squares = current.squares.slice();
+		this.checkOldBrowsers();
 		
-		if (calculateWinner(squares) || squares[i]) return;
-		squares[i] = this.state.xIsNext ? 'X' : 'O';
-		this.setState({
-			history: history.concat([{
-				squares: squares
-			}]),
-			xIsNext: !this.state.xIsNext
+		navigator.mediaDevices.getUserMedia(constraintObj).then((mediaStreamObj) => {
+			//connect the media stream to the first video element
+			let video = document.querySelector('video');
+			if ("srcObject" in video) {
+				video.srcObject = mediaStreamObj;
+			} else {
+				//old version
+				video.src = window.URL.createObjectURL(mediaStreamObj);
+			}
+			
+			video.onloadedmetadata = (event) => {
+				video.play(); 	//show in the video element what is being captured by the webcam
+			};
+			
+			console.log(1)
+			
+			//add listeners for saving video/audio
+			let start = document.getElementById('btnStart');
+			let stop = document.getElementById('btnStop');
+			let vidSave = document.getElementById('cameraOutput');
+			this.mediaRecorder = new MediaRecorder(mediaStreamObj);
+			
+			console.log('media', this.mediaRecorder);
+			let chunks = [];
+			
+			start.addEventListener('click', (event) => {
+				console.log('start', this.mediaRecorder);
+				this.mediaRecorder.start();
+				console.log(this.mediaRecorder.state);
+			})
+			stop.addEventListener('click', (event) => {
+				this.mediaRecorder.stop();
+				console.log(this.mediaRecorder.state);
+			});
+			this.mediaRecorder.ondataavailable = function(event) {
+				chunks.push(event.data);
+			}
+			this.mediaRecorder.onstop = (event) => {
+				let blob = new Blob(chunks, { 'type' : 'video/mp4;' });
+				chunks = [];
+				let videoURL = window.URL.createObjectURL(blob);
+				vidSave.src = videoURL;
+			}
+		})
+		.catch(function(err) { 
+			console.log(err.name, err.message); 
 		});
-	}
-	
-	render() {
-		const history = this.state.history;
-		const current = history[history.length - 1];
-		const winner = calculateWinner(current.squares);
-		let status;
-		if (winner) {
-			status = 'Winner: ' + winner;
-		}
-		else {
-			status = 'Next player: ' + (this.state.xIsNext ? 'X' : 'O');
-		}
 		
+		/*********************************
+		getUserMedia returns a Promise
+		resolve - returns a MediaStream Object
+		reject returns one of the following errors
+		AbortError - generic unknown cause
+		NotAllowedError (SecurityError) - user rejected permissions
+		NotFoundError - missing media track
+		NotReadableError - user permissions given but hardware/OS error
+		OverconstrainedError - constraint video settings preventing
+		TypeError - audio: false, video: false
+		*********************************/
+	};
+	
+	checkOldBrowsers = () => {
+		if (navigator.mediaDevices === undefined) {
+			navigator.mediaDevices = {};
+			navigator.mediaDevices.getUserMedia = function(constraintObj) {
+				let getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+				if (!getUserMedia) {
+					return Promise.reject(new Error('getUserMedia is not implemented in this browser'));
+				}
+				return new Promise(function(resolve, reject) {
+					getUserMedia.call(navigator, constraintObj, resolve, reject);
+				});
+			}
+		}
+		else{
+			navigator.mediaDevices.enumerateDevices()
+			.then(devices => {
+				devices.forEach(device=>{
+					// console.log(device.kind.toUpperCase(), device.label);
+				})
+			})
+			.catch(err=>{
+				console.log(err.name, err.message);
+			})
+		}
+	}
+
+	render() {
+		
+		this.initializeMediaRecorder();
+
 		return (
-			<div className="game">
-				<div className="game-board">
-					<Board 
-						squares={current.squares}
-						onClick={(i) => this.handleClick(i)}
-					/>
-				</div>
-				<div className="game-info">
-					<div>{status}</div>
-					<ol>{/* TODO */}</ol>
-				</div>
+			<div className="mediaRecorder">
+				<h1>React MediaRecorder</h1>
+				
+				<p>Welcome to the Media Recorder&trade;, where all of your wildest media recording dreams will come true.</p>
+		
+				<p><button id="btnStart">START RECORDING</button><br/>
+				<button id="btnStop">STOP RECORDING</button></p>
+				
+				<video id="cameraFeed" muted></video>
+				<video id="cameraOutput" controls></video>
 			</div>
 		);
 	}
 }
 
-calculateWinner(squares) {
-	const lines = [
-		[0, 1, 2],
-		[3, 4, 5],
-		[6, 7, 8],
-		[0, 3, 6],
-		[1, 4, 7],
-		[2, 5, 8],
-		[0, 4, 8],
-		[2, 4, 6],
-	];
-	for (let i = 0; i < lines.length; i++) {
-		const [a, b, c] = lines[i];
-		if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-		return squares[a];
-		}
-	}
-	return null;
-}
-
 ReactDOM.render(
-	<Game />,
+	<HTMLMediaRecorder />,
 	document.getElementById('root')
 );
