@@ -1,0 +1,77 @@
+@import './_responsive.scss';
+
+body {
+	margin: 0;
+	padding-left: 15px;
+	padding-right: 15px;
+}
+
+.media-recorder {
+	
+	.recording-controls {
+		margin-bottom: 10px;
+		
+		button {
+			border: 1px solid black;
+			border-radius: 3px;
+			padding: 5px 20px;
+			margin-right: 10px;
+			cursor: pointer;
+			
+			&.active {
+				background-color: red;
+				color: white;
+			}
+			
+			&:last-child {
+				margin-right: 0;
+			}
+		}
+	}
+	
+	.video-feed-container {
+		margin-bottom: 15px;
+		
+		@include tablet {
+			display: flex;
+		}
+		
+		h3 {
+			border-bottom: 1px solid black;
+			display: block;
+			width: calc(100% - 15px);
+			padding-bottom: 5px;
+			margin-top: 0;
+		}
+		
+		>div {
+			
+			@include tablet {
+				width: 50%;
+			}
+			
+			.input {
+				@include tablet {
+					margin-right: 15px;
+				}
+			}
+		}
+		
+		video {
+			max-width: 100%;
+			
+			@include mobile-only {
+				width: 100%;
+			}
+			
+			@include tablet {
+				width: calc(100% - 15px);
+			}
+		}
+		
+	}
+	
+	.visualizer-container {
+		margin-bottom: 10px;
+	}
+}

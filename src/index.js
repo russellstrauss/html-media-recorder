@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import './index.scss';
+import './css/index.scss';
 
 class HTMLMediaRecorder extends React.Component {
 	
@@ -8,7 +8,6 @@ class HTMLMediaRecorder extends React.Component {
 		super(props);
 		this.parentContainer = React.createRef();
 		this.mediaRecorder = null;
-		this.recordingActive = false;
 		this.visualizerCanvas = React.createRef();
 	}
 	
@@ -35,8 +34,8 @@ class HTMLMediaRecorder extends React.Component {
 				video.play(); 	// show in the video element what is being captured by the webcam
 			};
 			
-			let start = document.getElementById('btnStart'); // add listeners for saving video/audio
-			let stop = document.getElementById('btnStop');
+			let start = document.getElementById('startRecord'); // add listeners for saving video/audio
+			let stop = document.getElementById('stopRecord');
 			let vidSave = document.getElementById('cameraOutput');
 			this.mediaRecorder = new MediaRecorder(stream);
 			this.visualize(stream);
@@ -44,13 +43,13 @@ class HTMLMediaRecorder extends React.Component {
 			let chunks = [];
 			
 			start.addEventListener('click', (event) => {
-				this.mediaRecorder.start();
-				this.recordingActive = true;
+				if (this.mediaRecorder.state !== 'recording') this.mediaRecorder.start();
+				start.classList.add('active');
 			})
 			
 			stop.addEventListener('click', (event) => {
-				this.mediaRecorder.stop();
-				this.recordingActive = false;
+				if (this.mediaRecorder.state === 'recording') this.mediaRecorder.stop();
+				start.classList.remove('active');
 			});
 			
 			this.mediaRecorder.ondataavailable = function(event) {
@@ -138,7 +137,6 @@ class HTMLMediaRecorder extends React.Component {
 			let sliceWidth = WIDTH * 1.0 / bufferLength;
 			let x = 0;
 	
-	
 			for (let i = 0; i < bufferLength; i++) {
 	
 				let v = dataArray[i] / 128.0;
@@ -156,21 +154,14 @@ class HTMLMediaRecorder extends React.Component {
 	
 			canvasCtx.lineTo(canvas.width, canvas.height/2);
 			canvasCtx.stroke();
-	
 		}
 		
-		let parentX = this.parentContainer.current;
-		let vizCanvas = this.visualizerCanvas.current
-		console.log(parentX.offsetWidth, vizCanvas.offsetWidth);
-		
-		
+		let parentContainer = this.parentContainer.current;
+		let visualizerCanvas = this.visualizerCanvas.current
 		window.onresize = function() {
-			console.log('resize');
-			
-			vizCanvas.width = parentX.offsetWidth;
+			visualizerCanvas.width = parentContainer.offsetWidth;
 		}
 		window.onresize();
-		
 	}
 
 	render() {
@@ -183,16 +174,24 @@ class HTMLMediaRecorder extends React.Component {
 				
 				<p>Welcome to the Media Recorder&trade;, where all of your wildest media recording dreams will come true.</p>
 		
-				<p><button id="btnStart">START RECORDING</button><br/>
-				<button id="btnStop">STOP RECORDING</button></p>
+				<div className="recording-controls">
+					<button id="startRecord">START RECORDING</button>
+					<button id="stopRecord">STOP RECORDING</button>
+				</div>
 				
 				<div className="visualizer-container">
 					<canvas ref={this.visualizerCanvas} className="visualizer" height="60px"></canvas>
 				</div>
 				
 				<div className="video-feed-container">
-					<video id="cameraFeed" className="input" muted></video>
-					<video id="cameraOutput" className="output" controls></video>
+					<div>
+						<h3>Input</h3>
+						<video id="cameraFeed" className="input" muted></video>
+					</div>
+					<div>
+						<h3>Output</h3>
+						<video id="cameraOutput" className="output" controls></video>
+					</div>
 				</div>
 				
 			</div>

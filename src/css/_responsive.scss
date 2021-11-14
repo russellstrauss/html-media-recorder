@@ -1,0 +1,63 @@
+$mobile-width: 767px;
+$tablet-width: 768px;
+$desktop-width: 992px;
+$desktop-large-width: 1200px;
+
+// Target mobile-only (767px and below)
+@mixin mobile-only {
+	@media (max-width: #{$mobile-width}) {
+		@content;
+	}
+}
+
+@mixin small-screen { // tablet and mobile only
+	@media (max-width: #{$desktop-width}) {
+		@content;
+	}
+}
+
+// Target tablet and above (768px+)
+@mixin tablet {
+	@media (min-width: #{$tablet-width}) {
+		@content;
+	}
+}
+
+// Target only tablet (768 - 991px)
+@mixin tablet-only {
+	@media (min-width: #{$tablet-width}) and (max-width: #{$desktop-width - 1px}) {
+		@content;
+	}
+}
+
+// Target desktop and above (992px+)
+@mixin desktop {
+	@media (min-width: #{$desktop-width}) {
+		@content;
+	}
+}
+
+// Target desktop-large and above (1200px+)
+@mixin desktop-large {
+	@media (min-width: #{$desktop-large-width}) {
+		@content;
+	}
+}
+
+@mixin ie-only {
+	@media all and (-ms-high-contrast: none) {
+		@content;
+	}
+}
+
+@mixin ios-only {
+	@supports (-webkit-overflow-scrolling: touch) {
+		@content;
+	}
+}
+
+@mixin edge-only {
+    @supports (-ms-ime-align: auto) {
+        @content;
+    }
+}
