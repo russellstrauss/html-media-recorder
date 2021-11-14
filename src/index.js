@@ -1,61 +1,62 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import './index.css';
+import './index.scss';
 
 class HTMLMediaRecorder extends React.Component {
 	
 	constructor(props) {
 		super(props);
+		this.parentContainer = React.createRef();
 		this.mediaRecorder = null;
-	  }
+		this.recordingActive = false;
+		this.visualizerCanvas = React.createRef();
+	}
 	
 	initializeMediaRecorder = () => {
 		
-		
-		let constraintObj = { 
+		let constraints = { 
 			audio: true,
 			video: true
 		};
 		
 		this.checkOldBrowsers();
 		
-		navigator.mediaDevices.getUserMedia(constraintObj).then((mediaStreamObj) => {
-			//connect the media stream to the first video element
-			let video = document.querySelector('video');
+		navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
+			
+			let video = document.querySelector('#cameraFeed');
 			if ("srcObject" in video) {
-				video.srcObject = mediaStreamObj;
-			} else {
-				//old version
-				video.src = window.URL.createObjectURL(mediaStreamObj);
+				video.srcObject = stream;
+			}
+			else {
+				video.src = window.URL.createObjectURL(stream); //old version
 			}
 			
 			video.onloadedmetadata = (event) => {
-				video.play(); 	//show in the video element what is being captured by the webcam
+				video.play(); 	// show in the video element what is being captured by the webcam
 			};
 			
-			console.log(1)
-			
-			//add listeners for saving video/audio
-			let start = document.getElementById('btnStart');
+			let start = document.getElementById('btnStart'); // add listeners for saving video/audio
 			let stop = document.getElementById('btnStop');
 			let vidSave = document.getElementById('cameraOutput');
-			this.mediaRecorder = new MediaRecorder(mediaStreamObj);
+			this.mediaRecorder = new MediaRecorder(stream);
+			this.visualize(stream);
 			
-			console.log('media', this.mediaRecorder);
 			let chunks = [];
 			
 			start.addEventListener('click', (event) => {
-				console.log('start', this.mediaRecorder);
 				this.mediaRecorder.start();
-				console.log(this.mediaRecorder.state);
+				this.recordingActive = true;
 			})
+			
 			stop.addEventListener('click', (event) => {
 				this.mediaRecorder.stop();
-				console.log(this.mediaRecorder.state);
+				this.recordingActive = false;
 			});
+			
 			this.mediaRecorder.ondataavailable = function(event) {
 				chunks.push(event.data);
 			}
+			
 			this.mediaRecorder.onstop = (event) => {
 				let blob = new Blob(chunks, { 'type' : 'video/mp4;' });
 				chunks = [];
@@ -83,35 +84,101 @@ class HTMLMediaRecorder extends React.Component {
 	checkOldBrowsers = () => {
 		if (navigator.mediaDevices === undefined) {
 			navigator.mediaDevices = {};
-			navigator.mediaDevices.getUserMedia = function(constraintObj) {
+			navigator.mediaDevices.getUserMedia = function(constraints) {
 				let getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
 				if (!getUserMedia) {
 					return Promise.reject(new Error('getUserMedia is not implemented in this browser'));
 				}
 				return new Promise(function(resolve, reject) {
-					getUserMedia.call(navigator, constraintObj, resolve, reject);
+					getUserMedia.call(navigator, constraints, resolve, reject);
 				});
 			}
 		}
-		else{
+		else {
 			navigator.mediaDevices.enumerateDevices()
 			.then(devices => {
-				devices.forEach(device=>{
-					// console.log(device.kind.toUpperCase(), device.label);
-				})
-			})
-			.catch(err=>{
-				console.log(err.name, err.message);
-			})
+				devices.forEach(device => { /* console.log(device.kind.toUpperCase(), device.label);*/ });
+			}).catch(error => { console.log(error.name, error.message);});
 		}
+	}
+	
+	visualize = (stream) => {
+		
+		if (!this.audioCtx) {
+			this.audioCtx = new AudioContext();
+		}
+		let canvas = this.visualizerCanvas.current;
+		let canvasCtx = canvas.getContext('2d');
+		
+		const source = this.audioCtx.createMediaStreamSource(stream);
+		const analyser = this.audioCtx.createAnalyser();
+		analyser.fftSize = 2048;
+		const bufferLength = analyser.frequencyBinCount;
+		const dataArray = new Uint8Array(bufferLength);
+	
+		source.connect(analyser); //analyser.connect(this.audioCtx.destination);
+	
+		draw();
+		function draw() {
+			const WIDTH = canvas.width
+			const HEIGHT = canvas.height;
+	
+			requestAnimationFrame(draw);
+	
+			analyser.getByteTimeDomainData(dataArray);
+	
+			canvasCtx.fillStyle = 'rgb(0, 0, 0)';
+			canvasCtx.fillRect(0, 0, WIDTH, HEIGHT);
+	
+			canvasCtx.lineWidth = 2;
+			canvasCtx.strokeStyle = 'rgb(0, 255, 0)';
+	
+			canvasCtx.beginPath();
+	
+			let sliceWidth = WIDTH * 1.0 / bufferLength;
+			let x = 0;
+	
+	
+			for (let i = 0; i < bufferLength; i++) {
+	
+				let v = dataArray[i] / 128.0;
+				let y = v * HEIGHT/2;
+	
+				if (i === 0) {
+					canvasCtx.moveTo(x, y);
+				}
+				else {
+					canvasCtx.lineTo(x, y);
+				}
+	
+				x += sliceWidth;
+			}
+	
+			canvasCtx.lineTo(canvas.width, canvas.height/2);
+			canvasCtx.stroke();
+	
+		}
+		
+		let parentX = this.parentContainer.current;
+		let vizCanvas = this.visualizerCanvas.current
+		console.log(parentX.offsetWidth, vizCanvas.offsetWidth);
+		
+		
+		window.onresize = function() {
+			console.log('resize');
+			
+			vizCanvas.width = parentX.offsetWidth;
+		}
+		window.onresize();
+		
 	}
 
 	render() {
 		
 		this.initializeMediaRecorder();
-
+		
 		return (
-			<div className="mediaRecorder">
+			<div className="media-recorder" ref={this.parentContainer}>
 				<h1>React MediaRecorder</h1>
 				
 				<p>Welcome to the Media Recorder&trade;, where all of your wildest media recording dreams will come true.</p>
@@ -119,8 +186,15 @@ class HTMLMediaRecorder extends React.Component {
 				<p><button id="btnStart">START RECORDING</button><br/>
 				<button id="btnStop">STOP RECORDING</button></p>
 				
-				<video id="cameraFeed" muted></video>
-				<video id="cameraOutput" controls></video>
+				<div className="visualizer-container">
+					<canvas ref={this.visualizerCanvas} className="visualizer" height="60px"></canvas>
+				</div>
+				
+				<div className="video-feed-container">
+					<video id="cameraFeed" className="input" muted></video>
+					<video id="cameraOutput" className="output" controls></video>
+				</div>
+				
 			</div>
 		);
 	}
