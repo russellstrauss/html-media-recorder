@@ -6,6 +6,10 @@ import './css/index.scss';
 let audioCtx;
 let initialized = false;
 
+// let startTime;
+// let elapsedTime = 0;
+// let timerInterval;
+
 const HTMLMediaRecorder = (props) => {
 	
 	const config = {
@@ -21,6 +25,11 @@ const HTMLMediaRecorder = (props) => {
 	const [mediaRecorderActive, setMediaRecorderActive] = useState(false);
 	const [showCountdown, setCountdownVisibility] = useState(false);
 	let [countdownTimer, setCountdownTimer] = useState(config.countdownTimerDefault);
+	const [recordingTimestamp, setRecordingTimestamp] = useState(Date.now());
+	
+	const [recordingStartTime, setRecordingStartTime] = useState(0);
+	const [recordingElapsedTime, setRecordingElapsedTime] = useState(0);
+	const [recordingTimeInterval, setRecordingTimeInterval] = useState(null);
 	
 	const initializeMediaRecorder = () => {
 		
@@ -46,7 +55,7 @@ const HTMLMediaRecorder = (props) => {
 		navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
 			
 			let video = document.querySelector('#cameraFeed');
-			if ("srcObject" in video) {
+			if ('srcObject' in video) {
 				video.srcObject = stream;
 			}
 			else {
@@ -182,11 +191,11 @@ const HTMLMediaRecorder = (props) => {
 		let input = event.target;
 		
 		console.dir(input.files[0]);
-		// 	if (input.files[0].type.indexOf("audio/") > -1) {
+		// 	if (input.files[0].type.indexOf('audio/') > -1) {
 		// 		let audio = document.getElementById('audio');
 		// 		audio.src = window.URL.createObjectURL(input.files[0]);
 		// 	}
-		// 	else if (input.files[0].type.indexOf("video/") > -1) {
+		// 	else if (input.files[0].type.indexOf('video/') > -1) {
 		// 		let video = document.getElementById('video');
 		// 		video.src=window.URL.createObjectURL(input.files[0]);
 		// 	}
@@ -220,12 +229,54 @@ const HTMLMediaRecorder = (props) => {
 	
 	const mounted = () => {
 		if (!initialized) {
-			initializeMediaRecorder()
+			initializeMediaRecorder();
+			startTimer();
 			initialized = true;
 		}
 	}
 	useEffect(mounted);
 	
+	const timeToString = (time) => {
+		let diffInHrs = time / 3600000;
+		let hh = Math.floor(diffInHrs);
+	
+		let diffInMin = (diffInHrs - hh) * 60;
+		let mm = Math.floor(diffInMin);
+	
+		let diffInSec = (diffInMin - mm) * 60;
+		let ss = Math.floor(diffInSec);
+	
+		let diffInMs = (diffInSec - ss) * 100;
+		let ms = Math.floor(diffInMs);
+	
+		let formattedMM = mm.toString().padStart(2, '0');
+		let formattedSS = ss.toString().padStart(2, '0');
+		let formattedMS = ms.toString().padStart(2, '0');
+	
+		return `${formattedMM}:${formattedSS}:${formattedMS}`;
+	}
+	
+	const startTimer = () => {
+		
+		setRecordingStartTime(Date.now());
+		// startTime = Date.now() - elapsedTime;
+		setRecordingTimeInterval(setInterval(function printTime() {
+			// elapsedTime = Date.now() - recordingStartTime;
+			setRecordingElapsedTime(Date.now() - recordingStartTime);
+			console.log(timeToString(Date.now() - recordingStartTime))
+			// print(timeToString(elapsedTime));
+		}, 10));
+	}
+	
+	const pauseTimer = () => {
+		clearInterval(recordingTimeInterval);
+	}
+	
+	const resetTimer = () => {
+		clearInterval(recordingTimeInterval);
+		console.log('00:00:00');
+		setRecordingElapsedTime(0);
+	}
 	return (
 		<div className="media-recorder" ref={parentContainer}>
 			<h2>Media Recorder API Example</h2>
@@ -233,9 +284,9 @@ const HTMLMediaRecorder = (props) => {
 			<p>Welcome to the Media Recorder&trade;, where all of your wildest media recording dreams will come true.</p>
 			
 			<div className="recording-controls">
-				<button id="startRecord" onClick={executeCountdown} className={`${mediaRecorderActive ? "active" : ""}`}>START RECORDING</button>
+				<button id="startRecord" onClick={executeCountdown} className={`${mediaRecorderActive ? 'active' : ''}`}>START RECORDING</button>
 				<button id="stopRecord" onClick={stopRecord}>STOP RECORDING</button>
-				<button onClick={downloadVideo} id="downloadRecording" className={`${downloadReady ? "" : "inactive"}`}>DOWNLOAD VIDEO</button>
+				<button onClick={downloadVideo} id="downloadRecording" className={`${downloadReady ? '' : 'inactive'}`}>DOWNLOAD VIDEO</button>
 			</div>
 			
 			<div className="visualizer-container">
@@ -248,9 +299,23 @@ const HTMLMediaRecorder = (props) => {
 					<div className="video-container">
 						<video id="cameraFeed" className="input" muted></video>
 						
-						{(countdownTimer >= 1 && showCountdown) &&
-							<div className="countdown">{countdownTimer}</div>
-						}
+						<div className="recording-overlay">
+							
+							
+							{mediaRecorderActive && 
+								<div className="recording-indicator">
+									<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+									<circle cx="55" cy="55" r="50" fill="#000" />
+										<circle cx="50" cy="50" r="50" />
+									</svg>
+									{timeToString(recordingElapsedTime)}
+								</div>
+							}
+							
+							{(countdownTimer >= 1 && showCountdown) &&
+								<div className="countdown">{countdownTimer}</div>
+							}
+						</div>
 					</div>
 				</div>
 				<div>

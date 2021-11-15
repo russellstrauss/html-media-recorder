@@ -54,15 +54,38 @@ body {
 			display: flex;
 			align-items: stretch;
 			
-			.countdown {
-				color: white;
-				font-size: 150px;
+			.recording-overlay {
 				position: absolute;
-				top: 50%;
-				left: 50%;
-				transform: translate(-50%, -50%);
-				text-shadow: 2px 2px 0px #000;
+				top: 0; left: 0; right: 0; bottom: 0;
+				
+				.recording-indicator {
+					position: absolute;
+					top: 10px;
+					left: 10px;
+					display: flex;
+					color: white;
+					text-shadow: 1px 1px 0px #000;
+					font-family: sans-serif;
+					
+					svg {
+						width: 12px;
+						margin-right: 10px;
+						fill: #B82623;
+						overflow: visible;
+					}
+				}
+				
+				.countdown {
+					color: white;
+					font-size: 150px;
+					position: absolute;
+					top: 50%;
+					left: 50%;
+					transform: translate(-50%, -50%);
+					text-shadow: 2px 2px 0px #000;
+				}
 			}
+			
 			
 			video {
 				max-width: 100%;
