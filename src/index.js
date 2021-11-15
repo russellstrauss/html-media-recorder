@@ -4,8 +4,13 @@ import './css/index.scss';
 // import classnames from 'classnames';
 
 let audioCtx;
+let initialized = false;
 
 const HTMLMediaRecorder = (props) => {
+	
+	const config = {
+		countdownTimerDefault: 5
+	}
 	
 	const parentContainer = useRef(null);
 	const visualizerCanvas = useRef(null);
@@ -13,12 +18,15 @@ const HTMLMediaRecorder = (props) => {
 	const [downloadReady, setDownloadReady] = useState(false);
 	const [recordedBlob, setRecordedBlob] = useState(null);
 	const [mediaRecorder, setMediaRecorder] = useState(null);
+	const [mediaRecorderActive, setMediaRecorderActive] = useState(false);
+	const [showCountdown, setCountdownVisibility] = useState(false);
+	let [countdownTimer, setCountdownTimer] = useState(config.countdownTimerDefault);
 	
 	const initializeMediaRecorder = () => {
 		
 		let constraints = { 
 			audio: true,
-			// video: true
+			// video: true // default options
 			video: {
 				width: {
 					min: 640,
@@ -56,9 +64,12 @@ const HTMLMediaRecorder = (props) => {
 			visualize(stream);
 			
 			let chunks = [];
-			console.log(mediaRecorder);
 			mediaRecorderInstance.ondataavailable = function(event) {
 				chunks.push(event.data);
+			}
+			
+			mediaRecorderInstance.onstart = (event) => {
+				setMediaRecorderActive(true);
 			}
 			
 			mediaRecorderInstance.onstop = (event) => {
@@ -69,6 +80,7 @@ const HTMLMediaRecorder = (props) => {
 				
 				setDownloadReady(true);
 				setRecordedBlob(recordedBlobInstance);
+				setMediaRecorderActive(false);
 			}
 			setMediaRecorder(mediaRecorderInstance);
 		})
@@ -113,7 +125,7 @@ const HTMLMediaRecorder = (props) => {
 		const bufferLength = analyser.frequencyBinCount;
 		const dataArray = new Uint8Array(bufferLength);
 	
-		source.connect(analyser); //analyser.connect(audioCtx.destination);
+		source.connect(analyser);
 	
 		draw();
 		function draw() {
@@ -181,46 +193,49 @@ const HTMLMediaRecorder = (props) => {
 	}
 	
 	const beginRecord = () => {
-		console.log('begin');
+		setCountdownVisibility(false);
 		if (mediaRecorder.state !== 'recording') mediaRecorder.start();
 	}
 	
 	const stopRecord = () => {
-		console.log('stop');
-		if (mediaRecorder.state === 'recording') mediaRecorder.stop();
-	}
-	
-	const mediaRecorderInitialized = () => {
-		if (mediaRecorder) {
-			return true;
-		}
-		else {
-			return false;
+		if (mediaRecorder.state === 'recording') {
+			mediaRecorder.stop();
+			setCountdownTimer(config.countdownTimerDefault);
 		}
 	}
-	mediaRecorderInitialized();
 	
-	useEffect(() => {
-		initializeMediaRecorder();
-	}, []);
+	const executeCountdown = () => {
+		setCountdownVisibility(true);
+		let countdownInterval = setInterval(() => {
+			if (countdownTimer <= 1) {
+				beginRecord();
+				setCountdownTimer(null);
+				clearInterval(countdownInterval);
+			}
+			countdownTimer -= 1;
+			setCountdownTimer(countdownTimer);
+			
+		}, 1000);
+	}
+	
+	const mounted = () => {
+		if (!initialized) {
+			initializeMediaRecorder()
+			initialized = true;
+		}
+	}
+	useEffect(mounted);
 	
 	return (
 		<div className="media-recorder" ref={parentContainer}>
 			<h2>Media Recorder API Example</h2>
 			
 			<p>Welcome to the Media Recorder&trade;, where all of your wildest media recording dreams will come true.</p>
-	
+			
 			<div className="recording-controls">
-				
-				{/* <h2>{mediaRecorderInitialized().toString()}</h2>
-				 */}
-				{/* className={classnames({'active' : mediaRecorderInitialized})} */}
-				
-				<button id="startRecord" onClick={beginRecord}>START RECORDING</button>
-				
+				<button id="startRecord" onClick={executeCountdown} className={`${mediaRecorderActive ? "active" : ""}`}>START RECORDING</button>
 				<button id="stopRecord" onClick={stopRecord}>STOP RECORDING</button>
 				<button onClick={downloadVideo} id="downloadRecording" className={`${downloadReady ? "" : "inactive"}`}>DOWNLOAD VIDEO</button>
-				
 			</div>
 			
 			<div className="visualizer-container">
@@ -232,7 +247,10 @@ const HTMLMediaRecorder = (props) => {
 					<h3>Input</h3>
 					<div className="video-container">
 						<video id="cameraFeed" className="input" muted></video>
-						<div className="countdown">3</div>
+						
+						{(countdownTimer >= 1 && showCountdown) &&
+							<div className="countdown">{countdownTimer}</div>
+						}
 					</div>
 				</div>
 				<div>
