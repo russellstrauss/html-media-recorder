@@ -1,24 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import './css/index.scss';
-import classnames from 'classnames';
+// import classnames from 'classnames';
 
-class HTMLMediaRecorder extends React.Component {
+let audioCtx;
+
+const HTMLMediaRecorder = (props) => {
 	
-	constructor(props) {
-		super(props);
-		this.parentContainer = React.createRef();
-		this.mediaRecorder = null;
-		this.visualizerCanvas = React.createRef();
-		this.recordedBlob = null;
-		this.mobileCaptureInput = React.createRef();
-		
-		this.state = {
-			downloadReady: false
-		};
-	}
+	const parentContainer = useRef(null);
+	const visualizerCanvas = useRef(null);
+	const mobileCaptureInput = useRef(null);
+	const [downloadReady, setDownloadReady] = useState(false);
+	const [recordedBlob, setRecordedBlob] = useState(null);
+	const [mediaRecorder, setMediaRecorder] = useState(null);
 	
-	initializeMediaRecorder = () => {
+	const initializeMediaRecorder = () => {
 		
 		let constraints = { 
 			audio: true,
@@ -37,7 +33,7 @@ class HTMLMediaRecorder extends React.Component {
 			}
 		};
 		
-		this.checkOldBrowsers();
+		checkOldBrowsers();
 		
 		navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
 			
@@ -46,7 +42,7 @@ class HTMLMediaRecorder extends React.Component {
 				video.srcObject = stream;
 			}
 			else {
-				video.src = window.URL.createObjectURL(stream); //old version
+				video.src = window.URL.createObjectURL(stream); // old version
 			}
 			
 			video.onloadedmetadata = (event) => {
@@ -55,56 +51,33 @@ class HTMLMediaRecorder extends React.Component {
 			
 			let vidSave = document.getElementById('cameraOutput');
 			let options = {mimeType: 'video/webm; codecs=vp9'};
-			this.mediaRecorder = new MediaRecorder(stream, options);
-			this.visualize(stream);
+			let mediaRecorderInstance = new MediaRecorder(stream, options);
+			
+			visualize(stream);
 			
 			let chunks = [];
-			
-			// start.addEventListener('click', (event) => {
-			// 	if (this.mediaRecorder.state !== 'recording') this.mediaRecorder.start();
-			// 	start.classList.add('active');
-			// })
-			
-			// stop.addEventListener('click', (event) => {
-			// 	if (this.mediaRecorder.state === 'recording') this.mediaRecorder.stop();
-			// 	start.classList.remove('active');
-			// 	this.setState({
-			// 		downloadReady: true
-			// 	});
-			// });
-			
-			this.mediaRecorder.ondataavailable = function(event) {
+			console.log(mediaRecorder);
+			mediaRecorderInstance.ondataavailable = function(event) {
 				chunks.push(event.data);
 			}
 			
-			this.mediaRecorder.onstop = (event) => {
-				this.recordedBlob = new Blob(chunks, { 'type' : 'video/webm;' });
+			mediaRecorderInstance.onstop = (event) => {
+				let recordedBlobInstance = new Blob(chunks, { 'type' : 'video/webm;' });
 				chunks = [];
-				let videoURL = window.URL.createObjectURL(this.recordedBlob);
+				let videoURL = window.URL.createObjectURL(recordedBlobInstance);
 				vidSave.src = videoURL;
-				this.setState({
-					downloadReady: true
-				});
+				
+				setDownloadReady(true);
+				setRecordedBlob(recordedBlobInstance);
 			}
+			setMediaRecorder(mediaRecorderInstance);
 		})
 		.catch(function(err) { 
 			console.log(err.name, err.message);
 		});
-		
-		/*********************************
-		getUserMedia returns a Promise
-		resolve - returns a MediaStream Object
-		reject returns one of the following errors
-		AbortError - generic unknown cause
-		NotAllowedError (SecurityError) - user rejected permissions
-		NotFoundError - missing media track
-		NotReadableError - user permissions given but hardware/OS error
-		OverconstrainedError - constraint video settings preventing
-		TypeError - audio: false, video: false
-		*********************************/
 	};
 	
-	checkOldBrowsers = () => {
+	const checkOldBrowsers = () => {
 		if (navigator.mediaDevices === undefined) {
 			
 			alert('running old browser function');
@@ -126,21 +99,21 @@ class HTMLMediaRecorder extends React.Component {
 		}
 	}
 	
-	visualize = (stream) => {
+	const visualize = (stream) => {
 		
-		if (!this.audioCtx) {
-			this.audioCtx = new AudioContext();
+		if (!audioCtx) {
+			audioCtx = new AudioContext();
 		}
-		let canvas = this.visualizerCanvas.current;
+		let canvas = visualizerCanvas.current;
 		let canvasCtx = canvas.getContext('2d');
 		
-		const source = this.audioCtx.createMediaStreamSource(stream);
-		const analyser = this.audioCtx.createAnalyser();
+		const source = audioCtx.createMediaStreamSource(stream);
+		const analyser = audioCtx.createAnalyser();
 		analyser.fftSize = 2048;
 		const bufferLength = analyser.frequencyBinCount;
 		const dataArray = new Uint8Array(bufferLength);
 	
-		source.connect(analyser); //analyser.connect(this.audioCtx.destination);
+		source.connect(analyser); //analyser.connect(audioCtx.destination);
 	
 		draw();
 		function draw() {
@@ -172,16 +145,16 @@ class HTMLMediaRecorder extends React.Component {
 			canvasCtx.stroke();
 		}
 		
-		let parentContainer = this.parentContainer.current;
-		let visualizerCanvas = this.visualizerCanvas.current
+		let parentContainerEl = parentContainer.current;
+		let visualizerCanvasEl = visualizerCanvas.current
 		window.onresize = function() {
-			visualizerCanvas.width = parentContainer.offsetWidth;
+			visualizerCanvasEl.width = parentContainerEl.offsetWidth;
 		}
 		window.onresize();
 	}
 	
-	downloadVideo = () => {
-		let url = URL.createObjectURL(this.recordedBlob);
+	const downloadVideo = () => {
+		let url = URL.createObjectURL(recordedBlob);
 		let a = document.createElement('a');
 		document.body.appendChild(a);
 		a.style = 'display: none';
@@ -191,7 +164,7 @@ class HTMLMediaRecorder extends React.Component {
 		window.URL.revokeObjectURL(url);
 	}
 	
-	grabMobileFile = (event, element) => {
+	const grabMobileFile = (event, element) => {
 		console.log('event', event, 'element', element);
 		
 		let input = event.target;
@@ -207,83 +180,86 @@ class HTMLMediaRecorder extends React.Component {
 		// 	}
 	}
 	
-	beginRecord = () => {
+	const beginRecord = () => {
 		console.log('begin');
-		if (this.mediaRecorder.state !== 'recording') this.mediaRecorder.start();
+		if (mediaRecorder.state !== 'recording') mediaRecorder.start();
 	}
 	
-	stopRecord = () => {
+	const stopRecord = () => {
 		console.log('stop');
-		if (this.mediaRecorder.state === 'recording') this.mediaRecorder.stop();
+		if (mediaRecorder.state === 'recording') mediaRecorder.stop();
 	}
 	
-	mediaRecorderInitialized = () => {
-		if (this.mediaRecorder) {
+	const mediaRecorderInitialized = () => {
+		if (mediaRecorder) {
 			return true;
 		}
 		else {
 			return false;
 		}
 	}
-
-	render() {
-		
-		this.initializeMediaRecorder();
-		
-		return (
-			<div className="media-recorder" ref={this.parentContainer}>
-				<h2>Media Recorder API Example</h2>
+	mediaRecorderInitialized();
+	
+	useEffect(() => {
+		initializeMediaRecorder();
+	}, []);
+	
+	return (
+		<div className="media-recorder" ref={parentContainer}>
+			<h2>Media Recorder API Example</h2>
+			
+			<p>Welcome to the Media Recorder&trade;, where all of your wildest media recording dreams will come true.</p>
+	
+			<div className="recording-controls">
 				
-				<p>Welcome to the Media Recorder&trade;, where all of your wildest media recording dreams will come true.</p>
-		
-				<div className="recording-controls">
-					
-					<h2>{this.mediaRecorderInitialized().toString()}</h2>
-					
-					<button id="startRecord" onClick={this.beginRecord} className={classnames({'active' : this.mediaRecorderInitialized})}>START RECORDING</button>
-					
-					<button id="stopRecord" onClick={this.stopRecord}>STOP RECORDING</button>
-					<button onClick={this.downloadVideo} id="downloadRecording" className={`${this.state.downloadReady ? "" : "inactive"}`}>DOWNLOAD VIDEO</button>
-					
-				</div>
+				{/* <h2>{mediaRecorderInitialized().toString()}</h2>
+				 */}
+				{/* className={classnames({'active' : mediaRecorderInitialized})} */}
 				
-				<div className="visualizer-container">
-					<canvas ref={this.visualizerCanvas} className="visualizer" height="60px"></canvas>
-				</div>
+				<button id="startRecord" onClick={beginRecord}>START RECORDING</button>
 				
-				<div className="video-feed-container">
-					<div>
-						<h3>Input</h3>
-						<div className="video-container">
-							<video id="cameraFeed" className="input" muted></video>
-							<div className="countdown">3</div>
-						</div>
-					</div>
-					<div>
-						<h3>Output</h3>
-						<div className="video-container">
-							<video id="cameraOutput" className="output" controls></video>
-						</div>
-					</div>
-				</div>
+				<button id="stopRecord" onClick={stopRecord}>STOP RECORDING</button>
+				<button onClick={downloadVideo} id="downloadRecording" className={`${downloadReady ? "" : "inactive"}`}>DOWNLOAD VIDEO</button>
 				
-				<h2>Mobile in progress</h2>
-				
-				<form action="#">
-					
-					<input ref={this.mobileCaptureInput} onChange={this.grabMobileFile} type="file" id="capture" accept="video/*,audio/*" capture multiple />
-					
-					<br/>
-					<input type="submit" value="Process" />
-				</form>
-				<div><audio src="" id="audio" controls></audio></div>
-				<div><video src="" id="video" controls></video></div>
 			</div>
-		);
-	}
+			
+			<div className="visualizer-container">
+				<canvas ref={visualizerCanvas} className="visualizer" height="60px"></canvas>
+			</div>
+			
+			<div className="video-feed-container">
+				<div>
+					<h3>Input</h3>
+					<div className="video-container">
+						<video id="cameraFeed" className="input" muted></video>
+						<div className="countdown">3</div>
+					</div>
+				</div>
+				<div>
+					<h3>Output</h3>
+					<div className="video-container">
+						<video id="cameraOutput" className="output" controls></video>
+					</div>
+				</div>
+			</div>
+			
+			<h2>Mobile in progress</h2>
+			
+			<form action="#">
+				
+				<input ref={mobileCaptureInput} onChange={grabMobileFile} type="file" id="capture" accept="video/*,audio/*" capture multiple />
+				
+				<br/>
+				<input type="submit" value="Process" />
+			</form>
+			<div><audio src="" id="audio" controls></audio></div>
+			<div><video src="" id="video" controls></video></div>
+		</div>
+	);
 }
 
 ReactDOM.render(
 	<HTMLMediaRecorder />,
 	document.getElementById('root')
 );
+export default HTMLMediaRecorder;
