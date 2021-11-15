@@ -4,6 +4,7 @@ body {
 	margin: 0;
 	padding-left: 15px;
 	padding-right: 15px;
+	overflow-x: hidden;
 }
 
 .media-recorder {
@@ -17,6 +18,10 @@ body {
 			padding: 5px 20px;
 			margin-right: 10px;
 			cursor: pointer;
+			
+			&.inactive {
+				display: none;
+			}
 			
 			&.active {
 				background-color: red;
@@ -44,6 +49,35 @@ body {
 			margin-top: 0;
 		}
 		
+		.video-container {
+			position: relative;
+			display: flex;
+			align-items: stretch;
+			
+			.countdown {
+				color: white;
+				font-size: 150px;
+				position: absolute;
+				top: 50%;
+				left: 50%;
+				transform: translate(-50%, -50%);
+				text-shadow: 2px 2px 0px #000;
+			}
+			
+			video {
+				max-width: 100%;
+				aspect-ratio: 16 / 9;
+				
+				@include mobile-only {
+					width: 100%;
+				}
+				
+				@include tablet {
+					width: calc(100% - 15px);
+				}
+			}
+		}
+		
 		>div {
 			
 			@include tablet {
@@ -57,17 +91,6 @@ body {
 			}
 		}
 		
-		video {
-			max-width: 100%;
-			
-			@include mobile-only {
-				width: 100%;
-			}
-			
-			@include tablet {
-				width: calc(100% - 15px);
-			}
-		}
 		
 	}
 	
