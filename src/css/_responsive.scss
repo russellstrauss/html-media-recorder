@@ -10,12 +10,6 @@ $desktop-large-width: 1200px;
 	}
 }
 
-@mixin small-screen { // tablet and mobile only
-	@media (max-width: #{$desktop-width}) {
-		@content;
-	}
-}
-
 // Target tablet and above (768px+)
 @mixin tablet {
 	@media (min-width: #{$tablet-width}) {
@@ -37,6 +31,12 @@ $desktop-large-width: 1200px;
 	}
 }
 
+@mixin desktop-small-only {
+	@media (min-width: #{$desktop-width}) and (max-width: #{$desktop-large-width - 1px}) {
+		@content;
+	}
+}
+
 // Target desktop-large and above (1200px+)
 @mixin desktop-large {
 	@media (min-width: #{$desktop-large-width}) {
@@ -48,16 +48,4 @@ $desktop-large-width: 1200px;
 	@media all and (-ms-high-contrast: none) {
 		@content;
 	}
-}
-
-@mixin ios-only {
-	@supports (-webkit-overflow-scrolling: touch) {
-		@content;
-	}
-}
-
-@mixin edge-only {
-    @supports (-ms-ime-align: auto) {
-        @content;
-    }
 }

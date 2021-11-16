@@ -9,9 +9,9 @@ let initialized = false;
 
 let recordedBlobInstance;
 
-// let startTime;
-// let elapsedTime = 0;
-// let timerInterval;
+let startTime;
+let elapsedTime = 0;
+let timerInterval;
 
 const HTMLMediaRecorder = (props) => {
 	
@@ -33,6 +33,7 @@ const HTMLMediaRecorder = (props) => {
 	const [recordingStartTime, setRecordingStartTime] = useState(0);
 	const [recordingElapsedTime, setRecordingElapsedTime] = useState(0);
 	const [recordingTimeInterval, setRecordingTimeInterval] = useState(null);
+	const [emptyMessagesActive, setEmptyMessageActive] = useState(true);
 	
 	const initializeMediaRecorder = () => {
 		
@@ -202,9 +203,8 @@ const HTMLMediaRecorder = (props) => {
 		let parentContainerEl = parentContainer.current;
 		let visualizerCanvasEl = visualizerCanvas.current
 		window.onresize = function() {
-			visualizerCanvasEl.width = parentContainerEl.offsetWidth;
+			if (visualizerCanvasEl.parentElement) visualizerCanvasEl.width = visualizerCanvasEl.parentElement.offsetWidth;
 		}
-		window.onresize();
 	}
 	
 	const downloadVideo = () => {
@@ -218,20 +218,20 @@ const HTMLMediaRecorder = (props) => {
 		window.URL.revokeObjectURL(url);
 	}
 	
+	const clearEmptyMessage = () => {
+		
+	}
+	
 	const grabMobileFile = (event, element) => {
-		console.log('event', event, 'element', element);
 		
 		let input = event.target;
 		
-		console.dir(input.files[0]);
-		// 	if (input.files[0].type.indexOf('audio/') > -1) {
-		// 		let audio = document.getElementById('audio');
-		// 		audio.src = window.URL.createObjectURL(input.files[0]);
-		// 	}
-		// 	else if (input.files[0].type.indexOf('video/') > -1) {
-		// 		let video = document.getElementById('video');
-		// 		video.src=window.URL.createObjectURL(input.files[0]);
-		// 	}
+		if (input.files.length && input.files[0].type.indexOf('video/') > -1) {
+			let video = document.getElementById('cameraOutput');
+			video.classList.remove('empty');
+			video.src=window.URL.createObjectURL(input.files[0]);
+			setEmptyMessageActive(false);
+		}
 	}
 	
 	const beginRecord = () => {
@@ -264,6 +264,9 @@ const HTMLMediaRecorder = (props) => {
 		if (!initialized) {
 			initializeMediaRecorder();
 			startTimer();
+			setTimeout(() => {
+				window.dispatchEvent(new Event('resize'));
+			}, 1000);
 			initialized = true;
 		}
 	}
@@ -291,9 +294,9 @@ const HTMLMediaRecorder = (props) => {
 	
 	const startTimer = () => {
 		
-		setRecordingStartTime(Date.now());
+		setRecordingStartTime(Date.now() - recordingElapsedTime);
 		// startTime = Date.now() - elapsedTime;
-		setRecordingTimeInterval(setInterval(function printTime() {
+		setRecordingTimeInterval(setInterval(() => {
 			// elapsedTime = Date.now() - recordingStartTime;
 			setRecordingElapsedTime(Date.now() - recordingStartTime);
 			// console.log(timeToString(Date.now() - recordingStartTime))
@@ -312,64 +315,88 @@ const HTMLMediaRecorder = (props) => {
 	}
 	return (
 		<div className="media-recorder" ref={parentContainer}>
+			
 			<h2>Media Recorder API Example</h2>
 			
 			<p>Welcome to the Media Recorder&trade;, where all of your wildest media recording dreams will come true.</p>
 			
-			<div className="recording-controls">
-				<button id="startRecord" onClick={executeCountdown} className={`${mediaRecorderActive ? 'active' : ''}`}>START RECORDING</button>
-				<button id="stopRecord" onClick={stopRecord}>STOP RECORDING</button>
-				<button onClick={downloadVideo} id="downloadRecording" className={`${downloadReady ? '' : 'inactive'}`}>DOWNLOAD VIDEO</button>
-			</div>
-			
-			<div className="visualizer-container">
-				<canvas ref={visualizerCanvas} className="visualizer" height="60px"></canvas>
-			</div>
-			
-			<div className="video-feed-container">
-				<div>
-					<h3>Input</h3>
-					<div className="video-container">
-						<video id="cameraFeed" className="input" muted></video>
+			<div className="sidebar-layout">
+				<div className="sidebar">
+					<h3>Uploaded Videos</h3>
+					<ul>
+						<li>Video 1</li>
+						<li>Video 2</li>
+						<li>Video 3</li>
+					</ul>
+				</div>
+				<div className="sidebar-main">
+					
+					<div className="panel">
 						
-						<div className="recording-overlay">
-							
-							
-							{mediaRecorderActive && 
-								<div className="recording-indicator">
-									<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-									<circle cx="55" cy="55" r="50" fill="#000" />
-										<circle cx="50" cy="50" r="50" />
-									</svg>
-									{timeToString(recordingElapsedTime)}
-								</div>
-							}
-							
-							{(countdownTimer >= 1 && showCountdown) &&
-								<div className="countdown">{countdownTimer}</div>
-							}
+						<div className="mobile-upload">
+							<h2>Mobile Video Upload</h2>
+							<form>
+								<button>
+									<label>
+										Select Video for Upload
+										<input type="file" style={{display: 'none'}} ref={mobileCaptureInput} onChange={grabMobileFile} type="file" id="capture" accept="video/*, audio/*" capture multiple />
+									</label>
+								</button>
+							</form>
 						</div>
+						
+						<div className="video-feed-container flex">
+							<div className="camera-feed column">
+								<h3>Camera Feed</h3>
+								<div className="video-container">
+									<video id="cameraFeed" className="input" muted></video>
+									<div className="recording-overlay">
+											
+										{mediaRecorderActive &&
+											<div className="recording-indicator">
+												<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+												<circle cx="55" cy="55" r="50" fill="#000" />
+													<circle cx="50" cy="50" r="50" />
+												</svg>
+												{timeToString(recordingElapsedTime)}
+											</div>
+										}
+										
+										{(countdownTimer >= 1 && showCountdown) &&
+											<div className="countdown">{countdownTimer}</div>
+										}
+									</div>
+								</div>
+							</div>
+							<div className="column">
+								<h3>Media Viewer</h3>
+								<div className="video-container">
+									<video id="cameraOutput" className="output empty" controls></video>
+									{emptyMessagesActive &&
+										<div className="empty-message">Record or upload video here to view.</div>
+									}
+								</div>
+							</div>
+						</div>
+						
+						<div className="visualizer-ui">
+							<h3>Microphone Feed</h3>
+							<div className="visualizer-container">
+								<canvas ref={visualizerCanvas} className="visualizer" height="60px"></canvas>
+							</div>
+						</div>
+						
+						<div className="recording-controls">
+							<button id="startRecord" onClick={executeCountdown} className={`${mediaRecorderActive ? 'active' : ''}`}>START RECORDING</button>
+							<button id="stopRecord" onClick={stopRecord}>STOP RECORDING</button>
+							<button onClick={downloadVideo} id="downloadRecording" className={`${downloadReady ? '' : 'inactive'}`}>DOWNLOAD VIDEO</button>
+						</div>
+						
 					</div>
-				</div>
-				<div>
-					<h3>Output</h3>
-					<div className="video-container">
-						<video id="cameraOutput" className="output" controls></video>
-					</div>
+					
+					
 				</div>
 			</div>
-			
-			<h2>Mobile in progress</h2>
-			
-			<form action="#">
-				
-				<input ref={mobileCaptureInput} onChange={grabMobileFile} type="file" id="capture" accept="video/*,audio/*" capture multiple />
-				
-				<br/>
-				<input type="submit" value="Process" />
-			</form>
-			<div><audio src="" id="audio" controls></audio></div>
-			<div><video src="" id="video" controls></video></div>
 		</div>
 	);
 }
