@@ -1,10 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
+import axios from 'axios';
 import './css/index.scss';
 // import classnames from 'classnames';
 
 let audioCtx;
 let initialized = false;
+
+let recordedBlobInstance;
 
 // let startTime;
 // let elapsedTime = 0;
@@ -13,7 +16,7 @@ let initialized = false;
 const HTMLMediaRecorder = (props) => {
 	
 	const config = {
-		countdownTimerDefault: 5
+		countdownTimerDefault: 2
 	}
 	
 	const parentContainer = useRef(null);
@@ -81,8 +84,8 @@ const HTMLMediaRecorder = (props) => {
 				setMediaRecorderActive(true);
 			}
 			
-			mediaRecorderInstance.onstop = (event) => {
-				let recordedBlobInstance = new Blob(chunks, { 'type' : 'video/webm;' });
+			mediaRecorderInstance.onstop = async (event) => {
+				recordedBlobInstance = new Blob(chunks, { 'type' : 'video/webm;' });
 				chunks = [];
 				let videoURL = window.URL.createObjectURL(recordedBlobInstance);
 				vidSave.src = videoURL;
@@ -90,6 +93,36 @@ const HTMLMediaRecorder = (props) => {
 				setDownloadReady(true);
 				setRecordedBlob(recordedBlobInstance);
 				setMediaRecorderActive(false);
+				
+				let groupId = '5e9a554247d72a068e1e9a8d';
+				let memberId = '5f9606a22057ce00171770b6';
+				let filekey = 'videoname.webm';
+				let filetype = 'video/webm';
+				let filesize = 446464;
+				let privateUpload = false;
+				let signedURL;
+				let putData;
+				
+				
+				let putLinkRequestResponse = await axios.post('http://localhost:1337/memory-medias-putlink-request', { groupId, memberId, filekey, filetype, filesize, privateUpload })
+				.then((response) => {
+					// console.log(response)
+					signedURL = response.data.signedURL;
+					putData = recordedBlobInstance;
+					
+					console.log(recordedBlobInstance);
+					
+					axios.put(
+						signedURL,
+						putData
+					);
+				})
+				.catch(error => {
+					console.log(error);
+				});
+				
+				// console.dir(putLinkRequestResponse);
+				
 			}
 			setMediaRecorder(mediaRecorderInstance);
 		})
@@ -263,7 +296,7 @@ const HTMLMediaRecorder = (props) => {
 		setRecordingTimeInterval(setInterval(function printTime() {
 			// elapsedTime = Date.now() - recordingStartTime;
 			setRecordingElapsedTime(Date.now() - recordingStartTime);
-			console.log(timeToString(Date.now() - recordingStartTime))
+			// console.log(timeToString(Date.now() - recordingStartTime))
 			// print(timeToString(elapsedTime));
 		}, 10));
 	}
