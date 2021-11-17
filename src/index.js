@@ -207,6 +207,9 @@ const HTMLMediaRecorder = (props) => {
 	
 	const beginRecord = () => {
 		setCountdownVisibility(false);
+		elapsedTime = 0;
+		startTime = Date.now();
+		setRecordingTimestamp(elapsedTime);
 		if (mediaRecorder.state !== 'recording') mediaRecorder.start();
 	}
 	
@@ -265,14 +268,23 @@ const HTMLMediaRecorder = (props) => {
 	
 	const startTimer = () => {
 		
-		setRecordingStartTime(Date.now() - recordingElapsedTime);
-		// startTime = Date.now() - elapsedTime;
-		setRecordingTimeInterval(setInterval(() => {
-			// elapsedTime = Date.now() - recordingStartTime;
-			setRecordingElapsedTime(Date.now() - recordingStartTime);
-			// console.log(timeToString(Date.now() - recordingStartTime))
-			// print(timeToString(elapsedTime));
-		}, 10));
+		elapsedTime = 0;
+		
+		function print(txt) {
+			console.log(txt);
+			// setRecordingTimestamp(elapsedTime);
+		}
+		
+		function start() {
+			console.log('start');
+			startTime = Date.now() - elapsedTime;
+			timerInterval = setInterval(function printTime() {
+				elapsedTime = Date.now() - startTime;
+				setRecordingTimestamp(elapsedTime);
+				print(timeToString(elapsedTime));
+			}, 10);
+		}
+		start();
 	}
 	
 	const pauseTimer = () => {
@@ -327,7 +339,7 @@ const HTMLMediaRecorder = (props) => {
 												<circle cx="55" cy="55" r="50" fill="#000" />
 													<circle cx="50" cy="50" r="50" />
 												</svg>
-												{timeToString(recordingElapsedTime)}
+												{timeToString(recordingTimestamp)}
 											</div>
 										}
 										
@@ -364,7 +376,7 @@ const HTMLMediaRecorder = (props) => {
 							}
 							<button onClick={downloadVideo} id="downloadRecording" className={`${downloadReady ? '' : 'inactive'}`}>Download Video</button>
 						</div>
-						
+						{timeToString(recordingTimestamp)}
 					</div>
 				</div>
 			</div>
