@@ -1,39 +1,27 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import axios from 'axios';
+// import axios from 'axios';
 import './css/index.scss';
 import renameIcon from './assets/svg/rename.svg';
 import deleteIcon from './assets/svg/delete.svg';
 import downloadIcon from './assets/svg/download.svg';
 
-let audioCtx;
 let initialized = false;
-
-let recordedBlobInstance;
-
-let startTime;
-let elapsedTime = 0;
-let timerInterval;
+let audioCtx,recordedBlobInstance;
+let startTime, elapsedTime = 0, timerInterval = setInterval(() => {}, 100000);
+const config = {
+	countdownTimerDefault: 3
+}
 
 const HTMLMediaRecorder = (props) => {
 	
-	const config = {
-		countdownTimerDefault: 3
-	}
-	
-	const parentContainer = useRef(null);
 	const visualizerCanvas = useRef(null);
 	const [downloadReady, setDownloadReady] = useState(false);
 	const [recordedBlob, setRecordedBlob] = useState(null);
 	const [mediaRecorder, setMediaRecorder] = useState(null);
 	const [mediaRecorderActive, setMediaRecorderActive] = useState(false);
-	const [showCountdown, setCountdownVisibility] = useState(false);
-	let [countdownTimer, setCountdownTimer] = useState(config.countdownTimerDefault);
-	const [recordingTimestamp, setRecordingTimestamp] = useState(Date.now());
-	
-	const [recordingStartTime, setRecordingStartTime] = useState(0);
-	const [recordingElapsedTime, setRecordingElapsedTime] = useState(0);
-	const [recordingTimeInterval, setRecordingTimeInterval] = useState(null);
+	const [showCountdown, setCountdownVisibility] = useState(false); let [countdownTimer, setCountdownTimer] = useState(config.countdownTimerDefault);
+	const [recordingTimestamp, setRecordingTimestamp] = useState(0);
 	const [emptyMessagesActive, setEmptyMessageActive] = useState(true);
 	
 	const initializeMediaRecorder = () => {
@@ -95,6 +83,7 @@ const HTMLMediaRecorder = (props) => {
 				setDownloadReady(true);
 				setRecordedBlob(recordedBlobInstance);
 				setMediaRecorderActive(false);
+				clearInterval(timerInterval);
 			}
 			setMediaRecorder(mediaRecorderInstance);
 		})
@@ -127,24 +116,18 @@ const HTMLMediaRecorder = (props) => {
 	
 	const visualize = (stream) => {
 		
-		if (!audioCtx) {
-			audioCtx = new AudioContext();
-		}
+		if (!audioCtx) audioCtx = new AudioContext();
 		let canvas = visualizerCanvas.current;
 		let canvasCtx = canvas.getContext('2d');
-		
 		const source = audioCtx.createMediaStreamSource(stream);
 		const analyser = audioCtx.createAnalyser();
 		analyser.fftSize = 2048;
 		const bufferLength = analyser.frequencyBinCount;
 		const dataArray = new Uint8Array(bufferLength);
-	
 		source.connect(analyser);
 	
-		draw();
 		function draw() {
-			const WIDTH = canvas.width
-			const HEIGHT = canvas.height;
+			const WIDTH = canvas.width, HEIGHT = canvas.height;
 			requestAnimationFrame(draw);
 			analyser.getByteTimeDomainData(dataArray);
 			canvasCtx.fillStyle = 'rgb(0, 0, 0)';
@@ -152,26 +135,18 @@ const HTMLMediaRecorder = (props) => {
 			canvasCtx.lineWidth = 2;
 			canvasCtx.strokeStyle = 'rgb(255, 255, 255)';
 			canvasCtx.beginPath();
-			let sliceWidth = WIDTH * 1.0 / bufferLength;
-			let x = 0;
-	
+			let sliceWidth = WIDTH * 1.0 / bufferLength, x = 0;
+			
 			for (let i = 0; i < bufferLength; i++) {
-	
-				let v = dataArray[i] / 128.0;
-				let y = v * HEIGHT/2;
-				if (i === 0) {
-					canvasCtx.moveTo(x, y);
-				}
-				else {
-					canvasCtx.lineTo(x, y);
-				}
+				let v = dataArray[i] / 128.0, y = v * HEIGHT/2;
+				if (i === 0) { canvasCtx.moveTo(x, y);}
+				else { canvasCtx.lineTo(x, y); }
 				x += sliceWidth;
 			}
 			canvasCtx.lineTo(canvas.width, canvas.height/2);
 			canvasCtx.stroke();
 		}
-		
-		let parentContainerEl = parentContainer.current;
+		draw();
 		let visualizerCanvasEl = visualizerCanvas.current
 		window.onresize = function() {
 			if (visualizerCanvasEl.parentElement) visualizerCanvasEl.width = visualizerCanvasEl.parentElement.offsetWidth;
@@ -179,24 +154,13 @@ const HTMLMediaRecorder = (props) => {
 	}
 	
 	const downloadVideo = () => {
-		let url = URL.createObjectURL(recordedBlob);
-		let a = document.createElement('a');
-		document.body.appendChild(a);
-		a.style = 'display: none';
-		a.href = url;
-		a.download = 'videoCapture.webm';
-		a.click();
+		let url = URL.createObjectURL(recordedBlob), a = document.createElement('a');
+		document.body.appendChild(a); a.style = 'display: none'; a.href = url; a.download = 'videoCapture.webm'; a.click();
 		window.URL.revokeObjectURL(url);
 	}
 	
-	const clearEmptyMessage = () => {
-		
-	}
-	
 	const grabMobileFile = (event) => {
-		
 		let input = event.target;
-		
 		if (input.files.length && input.files[0].type.indexOf('video/') > -1) {
 			let video = document.getElementById('cameraOutput');
 			video.classList.remove('empty');
@@ -205,15 +169,13 @@ const HTMLMediaRecorder = (props) => {
 		}
 	}
 	
-	const beginRecord = () => {
+	const beginRecording = () => {
 		setCountdownVisibility(false);
-		elapsedTime = 0;
-		startTime = Date.now();
-		setRecordingTimestamp(elapsedTime);
+		startTimer();
 		if (mediaRecorder.state !== 'recording') mediaRecorder.start();
 	}
 	
-	const stopRecord = () => {
+	const stopRecording = () => {
 		if (mediaRecorder.state === 'recording') {
 			mediaRecorder.stop();
 			setCountdownTimer(config.countdownTimerDefault);
@@ -224,20 +186,18 @@ const HTMLMediaRecorder = (props) => {
 		setCountdownVisibility(true);
 		let countdownInterval = setInterval(() => {
 			if (countdownTimer <= 1) {
-				beginRecord();
+				beginRecording();
 				setCountdownTimer(null);
 				clearInterval(countdownInterval);
 			}
 			countdownTimer -= 1;
 			setCountdownTimer(countdownTimer);
-			
 		}, 1000);
 	}
 	
 	const mounted = () => {
 		if (!initialized) {
 			initializeMediaRecorder();
-			startTimer();
 			setTimeout(() => {
 				window.dispatchEvent(new Event('resize'));
 			}, 1000);
@@ -247,57 +207,25 @@ const HTMLMediaRecorder = (props) => {
 	useEffect(mounted);
 	
 	const timeToString = (time) => {
-		let diffInHrs = time / 3600000;
-		let hh = Math.floor(diffInHrs);
-	
-		let diffInMin = (diffInHrs - hh) * 60;
-		let mm = Math.floor(diffInMin);
-	
-		let diffInSec = (diffInMin - mm) * 60;
-		let ss = Math.floor(diffInSec);
-	
-		let diffInMs = (diffInSec - ss) * 100;
-		let ms = Math.floor(diffInMs);
-	
-		let formattedMM = mm.toString().padStart(2, '0');
-		let formattedSS = ss.toString().padStart(2, '0');
-		let formattedMS = ms.toString().padStart(2, '0');
-	
+		let diffInHrs = time / 3600000, hh = Math.floor(diffInHrs);
+		let diffInMin = (diffInHrs - hh) * 60, mm = Math.floor(diffInMin);
+		let diffInSec = (diffInMin - mm) * 60, ss = Math.floor(diffInSec);
+		let diffInMs = (diffInSec - ss) * 100, ms = Math.floor(diffInMs);
+		let formattedMM = mm.toString().padStart(2, '0'), formattedSS = ss.toString().padStart(2, '0'), formattedMS = ms.toString().padStart(2, '0');
 		return `${formattedMM}:${formattedSS}:${formattedMS}`;
 	}
 	
 	const startTimer = () => {
-		
 		elapsedTime = 0;
-		
-		function print(txt) {
-			console.log(txt);
-			// setRecordingTimestamp(elapsedTime);
-		}
-		
-		function start() {
-			console.log('start');
-			startTime = Date.now() - elapsedTime;
-			timerInterval = setInterval(function printTime() {
-				elapsedTime = Date.now() - startTime;
-				setRecordingTimestamp(elapsedTime);
-				print(timeToString(elapsedTime));
-			}, 10);
-		}
-		start();
+		startTime = Date.now() - elapsedTime;
+		timerInterval = setInterval(function printTime() {
+			elapsedTime = Date.now() - startTime;
+			setRecordingTimestamp(elapsedTime);
+		}, 10);
 	}
 	
-	const pauseTimer = () => {
-		clearInterval(recordingTimeInterval);
-	}
-	
-	const resetTimer = () => {
-		clearInterval(recordingTimeInterval);
-		console.log('00:00:00');
-		setRecordingElapsedTime(0);
-	}
 	return (
-		<div className="media-recorder" ref={parentContainer}>
+		<div className="media-recorder">
 			
 			<h2>Media Recorder API Example</h2>
 			
@@ -322,7 +250,7 @@ const HTMLMediaRecorder = (props) => {
 						<div className="mobile-upload">
 							<h2>Mobile Video Upload</h2>
 							<form>
-								<input type="file" onChange={grabMobileFile} type="file" id="capture" accept="video/*, audio/*" capture multiple />
+								<input type="file" onChange={grabMobileFile} id="capture" accept="video/*, audio/*" capture multiple />
 							</form>
 						</div>
 						
@@ -372,11 +300,10 @@ const HTMLMediaRecorder = (props) => {
 								<button id="startRecord" onClick={executeCountdown}>Start Recording</button>
 							}
 							{mediaRecorderActive && 
-								<button id="stopRecord" onClick={stopRecord} className={`${mediaRecorderActive ? 'active' : ''}`}>Stop Recording</button>
+								<button id="stopRecording" onClick={stopRecording} className={`${mediaRecorderActive ? 'active' : ''}`}>Stop Recording</button>
 							}
 							<button onClick={downloadVideo} id="downloadRecording" className={`${downloadReady ? '' : 'inactive'}`}>Download Video</button>
 						</div>
-						{timeToString(recordingTimestamp)}
 					</div>
 				</div>
 			</div>
