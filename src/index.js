@@ -356,8 +356,12 @@ const HTMLMediaRecorder = (props) => {
 						</div>
 						
 						<div className="recording-controls">
-							<button id="startRecord" onClick={executeCountdown} className={`${mediaRecorderActive ? 'active' : ''}`}>Start Recording</button>
-							<button id="stopRecord" onClick={stopRecord}>Stop Recording</button>
+							{!mediaRecorderActive && 
+								<button id="startRecord" onClick={executeCountdown}>Start Recording</button>
+							}
+							{mediaRecorderActive && 
+								<button id="stopRecord" onClick={stopRecord} className={`${mediaRecorderActive ? 'active' : ''}`}>Stop Recording</button>
+							}
 							<button onClick={downloadVideo} id="downloadRecording" className={`${downloadReady ? '' : 'inactive'}`}>Download Video</button>
 						</div>
 						
