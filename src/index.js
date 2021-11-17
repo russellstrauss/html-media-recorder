@@ -2,7 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import axios from 'axios';
 import './css/index.scss';
-// import classnames from 'classnames';
+import renameIcon from './assets/svg/rename.svg';
+import deleteIcon from './assets/svg/delete.svg';
+import downloadIcon from './assets/svg/download.svg';
 
 let audioCtx;
 let initialized = false;
@@ -16,12 +18,11 @@ let timerInterval;
 const HTMLMediaRecorder = (props) => {
 	
 	const config = {
-		countdownTimerDefault: 2
+		countdownTimerDefault: 3
 	}
 	
 	const parentContainer = useRef(null);
 	const visualizerCanvas = useRef(null);
-	const mobileCaptureInput = useRef(null);
 	const [downloadReady, setDownloadReady] = useState(false);
 	const [recordedBlob, setRecordedBlob] = useState(null);
 	const [mediaRecorder, setMediaRecorder] = useState(null);
@@ -94,36 +95,6 @@ const HTMLMediaRecorder = (props) => {
 				setDownloadReady(true);
 				setRecordedBlob(recordedBlobInstance);
 				setMediaRecorderActive(false);
-				
-				let groupId = '5e9a554247d72a068e1e9a8d';
-				let memberId = '5f9606a22057ce00171770b6';
-				let filekey = 'videoname.webm';
-				let filetype = 'video/webm';
-				let filesize = 446464;
-				let privateUpload = false;
-				let signedURL;
-				let putData;
-				
-				
-				let putLinkRequestResponse = await axios.post('http://localhost:1337/memory-medias-putlink-request', { groupId, memberId, filekey, filetype, filesize, privateUpload })
-				.then((response) => {
-					// console.log(response)
-					signedURL = response.data.signedURL;
-					putData = recordedBlobInstance;
-					
-					console.log(recordedBlobInstance);
-					
-					axios.put(
-						signedURL,
-						putData
-					);
-				})
-				.catch(error => {
-					console.log(error);
-				});
-				
-				// console.dir(putLinkRequestResponse);
-				
 			}
 			setMediaRecorder(mediaRecorderInstance);
 		})
@@ -222,7 +193,7 @@ const HTMLMediaRecorder = (props) => {
 		
 	}
 	
-	const grabMobileFile = (event, element) => {
+	const grabMobileFile = (event) => {
 		
 		let input = event.target;
 		
@@ -323,10 +294,13 @@ const HTMLMediaRecorder = (props) => {
 			<div className="sidebar-layout">
 				<div className="sidebar">
 					<h3>Uploaded Videos</h3>
-					<ul>
-						<li>Video 1</li>
-						<li>Video 2</li>
-						<li>Video 3</li>
+					<ul className="file-list">
+						<li>
+							Video 1
+							<img src={renameIcon} alt="rename media" />
+							<img src={deleteIcon} alt="delete media" />
+							<img src={downloadIcon} alt="download media" />
+						</li>
 					</ul>
 				</div>
 				<div className="sidebar-main">
@@ -336,12 +310,7 @@ const HTMLMediaRecorder = (props) => {
 						<div className="mobile-upload">
 							<h2>Mobile Video Upload</h2>
 							<form>
-								<button>
-									<label>
-										Select Video for Upload
-										<input type="file" style={{display: 'none'}} ref={mobileCaptureInput} onChange={grabMobileFile} type="file" id="capture" accept="video/*, audio/*" capture multiple />
-									</label>
-								</button>
+								<input type="file" onChange={grabMobileFile} type="file" id="capture" accept="video/*, audio/*" capture multiple />
 							</form>
 						</div>
 						
@@ -387,14 +356,12 @@ const HTMLMediaRecorder = (props) => {
 						</div>
 						
 						<div className="recording-controls">
-							<button id="startRecord" onClick={executeCountdown} className={`${mediaRecorderActive ? 'active' : ''}`}>START RECORDING</button>
-							<button id="stopRecord" onClick={stopRecord}>STOP RECORDING</button>
-							<button onClick={downloadVideo} id="downloadRecording" className={`${downloadReady ? '' : 'inactive'}`}>DOWNLOAD VIDEO</button>
+							<button id="startRecord" onClick={executeCountdown} className={`${mediaRecorderActive ? 'active' : ''}`}>Start Recording</button>
+							<button id="stopRecord" onClick={stopRecord}>Stop Recording</button>
+							<button onClick={downloadVideo} id="downloadRecording" className={`${downloadReady ? '' : 'inactive'}`}>Download Video</button>
 						</div>
 						
 					</div>
-					
-					
 				</div>
 			</div>
 		</div>
